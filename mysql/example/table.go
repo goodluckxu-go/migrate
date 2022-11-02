@@ -1,9 +1,3 @@
-# go版本的migrate创建
-
-使用正则表达式生成sql语句
-
-## 用法(usage)
-~~~go
 package example
 
 import (
@@ -54,18 +48,3 @@ func (m *MyTable) Up() {
 
 func (m *MyTable) Down() {
 }
-~~~
-
-执行该文件代码
-~~~go
-sqlList, err := mysql.ParseSql("./example/table.go", FuncType.Up)
-~~~
-
-生成sql格式查看mysql/example/table.sql
-
-
-## 问题(problem)
-
-目前只支持mysql的解析
-
-目前对符号 '(', ')' 不太友好，使用可能导致正则失效
