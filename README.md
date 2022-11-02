@@ -58,7 +58,7 @@ func (m *MyTable) Down() {
 
 执行该文件代码
 ~~~go
-sqlList, err := mysql.ParseSql("./example/table.go", FuncType.Up)
+sqlList, err := mysql.ParseSql("./example/table.go", mysql.FuncType.Up)
 ~~~
 
 执行结果
