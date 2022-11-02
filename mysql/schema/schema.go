@@ -1,7 +1,7 @@
 package schema
 
 import (
-	"github.com/goodluckxu/migrate/mysql/schema/tb"
+	"github.com/goodluckxu-go/migrate/mysql/schema/tb"
 )
 
 // Table 修改表

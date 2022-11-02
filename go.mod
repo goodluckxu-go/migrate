@@ -1,3 +1,3 @@
-module github.com/goodluckxu/migrate
+module github.com/goodluckxu-go/migrate
 
 go 1.17
