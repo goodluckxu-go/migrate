@@ -34,7 +34,7 @@ func ParseSql(filePath string, funcType string) ([]string, error) {
 		columnList := reg.getColumn(schemaContent)
 		switch tableType {
 		case "Create":
-			tableMap := reg.getTableColumn(schemaOther)
+			tableMap := reg.getOneColumn(schemaOther)
 			sql, errs := had.mergeCreate(columnList, schemaTable)
 			if errs != nil {
 				return nil, errs
@@ -48,7 +48,7 @@ func ParseSql(filePath string, funcType string) ([]string, error) {
 			sql += had.handleColumnData(tableMap["Comment"], "'", "", " COMMENT=?", "")
 			sqlList = append(sqlList, sql)
 		case "CreateIfNotExists":
-			tableMap := reg.getTableColumn(schemaOther)
+			tableMap := reg.getOneColumn(schemaOther)
 			sql, errs := had.mergeCreate(columnList, schemaTable)
 			if errs != nil {
 				return nil, errs

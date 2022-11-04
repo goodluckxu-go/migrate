@@ -56,41 +56,29 @@ func (r *Regexp) getSchema(content string) []map[string]interface{} {
 }
 
 func (r *Regexp) getColumn(content string) []map[string][]string {
-	regString := `table(((\.(?s).+?)*?)\n)*`
+	regString := `table( |\t)*(\.((?s).+?)\))( |\t)*\n`
 	reg := regexp.MustCompile(regString)
 	rs := []map[string][]string{}
 	for _, vMap := range reg.FindAllStringSubmatch(content, -1) {
-		columnString := vMap[1]
-		columnRegString := `\.((?s).*?)\((.*?)*\)`
-		columnReg := regexp.MustCompile(columnRegString)
-		columnInfo := map[string][]string{}
-		for _, columnMap := range columnReg.FindAllStringSubmatch(columnString, -1) {
-			columnType := strings.Trim(columnMap[1], " |\t|\n")
-			columnInfo["validSort"] = append(columnInfo["validSort"], columnType)
-			columnTmp := strings.Split(columnMap[2], ",")
-			columnValList := []string{}
-			for _, columnVal := range columnTmp {
-				columnVal = strings.Trim(columnVal, " |\t")
-				if columnVal == "" {
-					continue
-				}
-				columnValList = append(columnValList, columnVal)
-			}
-			columnInfo[columnType] = columnValList
-		}
+		columnString := vMap[2]
+		columnInfo := r.getOneColumn(columnString)
 		rs = append(rs, columnInfo)
 	}
 	return rs
 }
 
-func (r *Regexp) getTableColumn(content string) map[string][]string {
-	regString := `\.((?s).*?)\((.*?)*\)`
+func (r *Regexp) getOneColumn(content string) map[string][]string {
+	content = strings.ReplaceAll(content, "\n", "")
+	content = strings.ReplaceAll(content, "\t", "")
+	content = regexp.MustCompile(`(\))\.`).ReplaceAllString(content, "$1..")
+	content += "."
+	regString := `\.( \t|\n)*(\w+)\((.*?)*\)\.`
 	reg := regexp.MustCompile(regString)
 	rs := map[string][]string{}
 	for _, columnMap := range reg.FindAllStringSubmatch(content, -1) {
-		columnType := strings.Trim(columnMap[1], " |\t|\n")
+		columnType := columnMap[2]
 		rs["validSort"] = append(rs["validSort"], columnType)
-		columnTmp := strings.Split(columnMap[2], ",")
+		columnTmp := strings.Split(columnMap[3], ",")
 		columnValList := []string{}
 		for _, columnVal := range columnTmp {
 			columnVal = strings.Trim(columnVal, " |\t")
