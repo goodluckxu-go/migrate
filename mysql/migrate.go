@@ -1,17 +1,26 @@
 package mysql
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
+	"regexp"
 	"strings"
 )
 
-var FuncType = struct {
-	Up   string
-	Down string
-}{Up: "Up", Down: "Down"}
+var (
+	FuncType = struct {
+		Up   string
+		Down string
+	}{Up: "Up", Down: "Down"}
+	// 注释字符串
+	siteList = [][]string{
+		{"//"},
+		{"/*", "*/"},
+	}
+)
 
 func ParseSql(filePath string, funcType string) ([]string, error) {
 	reg := new(Regexp)
@@ -83,12 +92,49 @@ func readAll(filePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	by, err := ioutil.ReadAll(fi)
-	_ = fi.Close()
-	if err != nil {
-		return "", err
+	defer fi.Close()
+	br := bufio.NewReader(fi)
+	isSite := false
+	content := ""
+	for {
+		a, _, c := br.ReadLine()
+		if c == io.EOF {
+			break
+		}
+		line := string(a)
+		// 过滤掉注释
+		tLine := ""
+		for _, site := range siteList {
+			if len(site) == 1 {
+				siteIndex := strings.Index(line, site[0])
+				if siteIndex != -1 {
+					line = line[0:siteIndex]
+				}
+			}
+			if len(site) == 2 {
+				siteStartIndex := strings.Index(line, site[0])
+				siteStopIndex := strings.Index(line, site[1])
+				if !isSite && siteStartIndex == -1 && siteStopIndex == -1 {
+					tLine = line
+				}
+				if siteStartIndex != -1 && siteStopIndex != -1 {
+					rep, _ := regexp.Compile(`/\*.*?\*/`)
+					tLine = rep.ReplaceAllString(line, "")
+				} else {
+					if siteStartIndex != -1 {
+						tLine = line[0:siteStartIndex]
+						isSite = true
+					}
+					if siteStopIndex != -1 {
+						tLine = line[siteStopIndex+len(site[1]):]
+						isSite = false
+					}
+				}
+			}
+		}
+		line = tLine
+		content += line + "\n"
 	}
-	content := string(by)
 	content = strings.ReplaceAll(content, "\r\n", "\n")
 	content = strings.ReplaceAll(content, "\r", "\n")
 	return content, nil
