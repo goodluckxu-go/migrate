@@ -8,7 +8,7 @@ import (
 func Table(table string, fn func(table tb.Table)) {
 }
 
-// Table 创建表
+// Create 创建表
 func Create(table string, fn func(table tb.CreateTable)) *tb.Schema {
 	return new(tb.Schema)
 }

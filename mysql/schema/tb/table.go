@@ -22,7 +22,7 @@ func (t *Table) ChangeColumn(oldColumn, newColumn string) *Types {
 func (t *Table) DropColumn(column string) {
 }
 
-// Indexes 添加索引
+// AddIndexes 添加索引
 func (t *Table) AddIndexes(columns ...string) *Indexes {
 	return new(Indexes)
 }
@@ -31,7 +31,7 @@ func (t *Table) AddIndexes(columns ...string) *Indexes {
 func (t *Table) DropIndexes(name string) {
 }
 
-// Indexes 添加主键
+// AddPrimaryKey 添加主键
 func (t *Table) AddPrimaryKey(columns ...string) {
 }
 
