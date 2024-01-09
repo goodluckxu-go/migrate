@@ -13,7 +13,7 @@ func (s *Schema) Charset(charset string) *Schema {
 	return s
 }
 
-// Collate 校对规则
+// Collate 排序规则
 func (s *Schema) Collate(collate string) *Schema {
 	return s
 }

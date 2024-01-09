@@ -13,7 +13,7 @@ func (m *MyTable) Up() {
 	schema.DropIfExists("user_info")
 	schema.Create("user", func(table tb.CreateTable) {
 		table.Column("id").Int().Unsigned().AutoIncrement().Comment("主键")
-		table.Column("name").Varchar(50).Default("").Comment("用户名")
+		table.Column("name").Varchar(50).Charset("utf8mb4").Collate("utf8mb4_unicode_ci").Default("").Comment("用户名")
 		table.Column("tel").Varchar(20).Default("").Comment("电话号码")
 		table.Column("password").Varchar(32).Default("").Comment("密码")
 		table.Column("created_at").Timestamp().Nullable().Default(nil).Comment("创建时间")

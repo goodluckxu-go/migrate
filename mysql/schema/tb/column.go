@@ -23,6 +23,16 @@ func (c *Column) Comment(column string) *Column {
 	return c
 }
 
+// Charset 编码
+func (c *Column) Charset(charset string) *Column {
+	return c
+}
+
+// Collate 排序规则
+func (c *Column) Collate(collate string) *Column {
+	return c
+}
+
 // AutoIncrement 自动递增
 func (c *Column) AutoIncrement() *Column {
 	return c

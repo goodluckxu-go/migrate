@@ -53,6 +53,8 @@ func (h *Handle) mergeColumn(columnMap map[string][]string, typeList []string, t
 		}
 		sql += h.handleColumnData(columnMap[columnType], "'", ",",
 			fmt.Sprintf(" %s?(??)", strings.ToLower(columnType)), "")
+		sql += h.handleColumnData(columnMap["Charset"], "", "", " CHARACTER SET ?", "")
+		sql += h.handleColumnData(columnMap["Collate"], "", "", " COLLATE ?", "")
 		sql += h.handleColumnData(columnMap["Unsigned"], "", "", " unsigned", "")
 		sql += h.handleColumnData(columnMap["Zerofill"], "", "", " zerofill", "")
 		sql += h.handleColumnData(columnMap["Nullable"], "", "", " NULL", " NOT NULL")

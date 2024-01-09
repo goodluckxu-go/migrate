@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS `user`;
 DROP TABLE IF EXISTS `user_info`;
 CREATE TABLE `user` (
  `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键',
- `name` varchar(50) NOT NULL DEFAULT '' COMMENT '用户名',
+ `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '用户名',
  `tel` varchar(20) NOT NULL DEFAULT '' COMMENT '电话号码',
  `password` varchar(32) NOT NULL DEFAULT '' COMMENT '密码',
  `created_at` timestamp NULL DEFAULT NULL COMMENT '创建时间',
