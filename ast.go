@@ -2,7 +2,6 @@ package migrate
 
 import (
 	"fmt"
-	"github.com/goodluckxu-go/migrate/schema/mysql"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -386,18 +385,18 @@ func getTableList(fSet *token.FileSet, f *ast.FuncDecl, importMap map[string]str
 						// 验证字段
 						switch tableValue.Type {
 						case "mysql":
-							var args []mysql.Arg
+							var args []arg
 							for _, v := range column.LianFuncSort {
 								var argTypes []string
 								for _, internetArg := range column.InternetFunc[v] {
 									argTypes = append(argTypes, internetArg.Type)
 								}
-								args = append(args, mysql.Arg{
+								args = append(args, arg{
 									Type:     v,
 									ArgTypes: argTypes,
 								})
 							}
-							if err = validInternetFuncMySQL(funcArgValid[tableValue.Type][tableValue.Active], args); err != nil {
+							if err = validInternetFunc(tableValue.Type, funcArgValid[tableValue.Type][tableValue.Active], args); err != nil {
 								err = fmt.Errorf("%v: %v",
 									fSet.Position(exprStmt.X.Pos()), err.Error())
 								return

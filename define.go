@@ -2,7 +2,6 @@ package migrate
 
 import (
 	_ "github.com/goodluckxu-go/migrate/schema"
-	"github.com/goodluckxu-go/migrate/schema/mysql"
 	_ "unsafe"
 )
 
@@ -36,6 +35,3 @@ var schemaFuncValid map[string]int
 
 //go:linkname funcArgValid github.com/goodluckxu-go/migrate/schema.funcArgValid
 var funcArgValid map[string]map[string]string
-
-//go:linkname validInternetFuncMySQL github.com/goodluckxu-go/migrate/schema/mysql.validInternetFunc
-func validInternetFuncMySQL(funcName string, funcNameList []mysql.Arg) (err error)

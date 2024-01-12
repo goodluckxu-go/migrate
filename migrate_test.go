@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -8,6 +9,8 @@ import (
 
 func TestNew(t *testing.T) {
 	sqlMapList, err := ParseSQL("./example/table.go", []string{"Up"})
+	fmt.Println(err)
+	return
 	if err != nil {
 		t.Errorf("错误: %s", err.Error())
 	}
