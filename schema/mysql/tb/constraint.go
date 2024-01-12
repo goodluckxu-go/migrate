@@ -14,7 +14,7 @@ func (c *Constraint) QuoteTable(table string) *Constraint {
 }
 
 // QuoteColumn 引用字段
-func (c *Constraint) QuoteColumn(columns ...string) *Constraint {
+func (c *Constraint) QuoteColumn(column string, columns ...string) *Constraint {
 	return c
 }
 
