@@ -7,7 +7,7 @@
 - go语言解析，不符合定义规范的语法报错误的文件以及对应文件的行列未知
 - go语言解析，引入可使用别名
 - go语言解析，基层方法可赋值 方法有[schema.Drop,schema.Edit]
-- go语言解析，schema.Drop,schema.Edit两个方法可以泛型，目前支持的
+- go语言解析，schema.Drop,schema.Edit两个方法可以泛型
 
 
 ## 用法(usage)
@@ -80,14 +80,18 @@ sqlMapList, err := ParseSQL("./example/table.go", []string{"Up"})
 if err != nil {
 	log.Fatal(err)
 }
-for sqlType, sqlList := range sqlMapList {
-	fmt.Println("### " + sqlType + " ###\n")
-	fmt.Println(strings.Join(sqlList, ";\n"))
+for funcName, sqlAll := range sqlMapList {
+	fmt.Println("### func name " + funcName + " ###")
+	for sqlType, sqlList := range sqlAll {
+		fmt.Println("### " + sqlType + " ###")
+		fmt.Println(strings.Join(sqlList, ";\n"))
+	}
 }
 ~~~
 
 执行结果
 ~~~sql
+### func name Up ###
 ### mysql ###
 DROP TABLE `user`;
 DROP TABLE IF EXISTS `user_info`;

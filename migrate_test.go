@@ -12,9 +12,12 @@ func TestNew(t *testing.T) {
 		t.Errorf("错误: %s", err.Error())
 	}
 	f, _ := os.OpenFile("./example/table.sql", os.O_WRONLY|os.O_CREATE, 0666)
-	for sqlType, sqlList := range sqlMapList {
-		_, _ = f.Write([]byte("### " + sqlType + " ###\n"))
-		_, _ = f.Write([]byte(strings.Join(sqlList, ";\n")))
+	for funcName, sqlAll := range sqlMapList {
+		_, _ = f.Write([]byte("### func name " + funcName + " ###\n"))
+		for sqlType, sqlList := range sqlAll {
+			_, _ = f.Write([]byte("### " + sqlType + " ###\n"))
+			_, _ = f.Write([]byte(strings.Join(sqlList, ";\n")))
+		}
 	}
 	_ = f.Close()
 }

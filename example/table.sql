@@ -1,3 +1,4 @@
+### func name Up ###
 ### mysql ###
 DROP TABLE `user`;
 DROP TABLE IF EXISTS `user_info`;
