@@ -19,6 +19,8 @@ func ParseSQL(filePath string, funcNameList []string) (sqlMapList map[string]map
 			switch table.Type {
 			case "mysql":
 				sqlMapList[funcName][table.Type] = append(sqlMapList[funcName][table.Type], new(parseMySQL).ParseSQL(table)...)
+			case "pgsql":
+				sqlMapList[funcName][table.Type] = append(sqlMapList[funcName][table.Type], new(parsePgSQL).ParseSQL(table)...)
 			}
 		}
 	}

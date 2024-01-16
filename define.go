@@ -2,6 +2,7 @@ package migrate
 
 import (
 	_ "github.com/goodluckxu-go/migrate/schema"
+	"go/token"
 	_ "unsafe"
 )
 
@@ -26,8 +27,9 @@ type columnAst struct {
 
 // 链表方法参数ast解析
 type argAst struct {
-	Val  string // 字段值
-	Type string // 字段类型
+	Val  interface{} // 字段值
+	Type string      // 字段类型
+	Pos  token.Pos   // 位置
 }
 
 //go:linkname schemaFuncValid github.com/goodluckxu-go/migrate/schema.schemaFuncValid

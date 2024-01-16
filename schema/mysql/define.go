@@ -6,17 +6,17 @@ import (
 
 var (
 	funcArgValid = map[string]string{
-		"Create":            "tb.CreateTable",
-		"CreateIfNotExists": "tb.CreateTable",
-		"Update":            "tb.UpdateTable",
+		"Create":            "*tb.CreateTable",
+		"CreateIfNotExists": "*tb.CreateTable",
+		"Update":            "*tb.UpdateTable",
 	}
 )
 
-type Create func(table tb.CreateTable)
+type Create func(table *tb.CreateTable)
 
-type CreateIfNotExists func(table tb.CreateTable)
+type CreateIfNotExists func(table *tb.CreateTable)
 
-type Update func(table tb.UpdateTable)
+type Update func(table *tb.UpdateTable)
 
 type Drop uint8
 

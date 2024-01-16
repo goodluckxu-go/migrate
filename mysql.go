@@ -197,7 +197,7 @@ func (p parseMySQL) handleColumnData(funcArgs []argAst, argSingleAround, argMulA
 	}
 	var argList []string
 	for _, arg := range funcArgs {
-		ar := arg.Val
+		ar := fmt.Sprintf("%v", arg.Val)
 		if arg.Type == "nil" {
 			ar = "NULL"
 		} else if argSingleAround != "" {

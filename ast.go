@@ -128,7 +128,7 @@ func getFunNameByIndexExpr(fSet *token.FileSet, indexExpr *ast.IndexExpr, import
 }
 
 // 获取字段
-func getColumn(fSet *token.FileSet, col ast.Expr, internetCallName string) (column columnAst, err error) {
+func getColumn(fSet *token.FileSet, col ast.Expr, internetCallName string, importMap map[string]string) (column columnAst, err error) {
 	column.InternetFunc = map[string][]argAst{}
 	var ok bool
 	switch val := col.(type) {
@@ -146,6 +146,7 @@ func getColumn(fSet *token.FileSet, col ast.Expr, internetCallName string) (colu
 				if v.Name == "nil" {
 					args = append(args, argAst{
 						Type: "nil",
+						Pos:  v.Pos(),
 					})
 				}
 			case *ast.BasicLit:
@@ -159,12 +160,55 @@ func getColumn(fSet *token.FileSet, col ast.Expr, internetCallName string) (colu
 				args = append(args, argAst{
 					Val:  newVal,
 					Type: strings.ToLower(typeString),
+					Pos:  v.Pos(),
+				})
+			case *ast.CallExpr:
+				// 映射类型，例如：int64
+				if len(v.Args) != 1 {
+					continue
+				}
+				var basic *ast.BasicLit
+				if basic, ok = v.Args[0].(*ast.BasicLit); !ok {
+					continue
+				}
+				var ident *ast.Ident
+				if ident, ok = v.Fun.(*ast.Ident); !ok {
+					continue
+				}
+				args = append(args, argAst{
+					Val:  basic.Value,
+					Type: ident.Name,
+					Pos:  basic.Pos(),
+				})
+			case *ast.FuncLit:
+				if len(v.Type.Params.List) == 0 {
+					continue
+				}
+				param := v.Type.Params.List[0]
+				childInternetCallName := getInternetCallName(param, importMap)
+				internetCallList := strings.Split(childInternetCallName, " ")
+				var childColumnList []columnAst
+				for _, co := range v.Body.List {
+					var exprStmt *ast.ExprStmt
+					if exprStmt, ok = co.(*ast.ExprStmt); ok {
+						childColumn, er := getColumn(fSet, exprStmt.X, childInternetCallName, importMap)
+						if er != nil {
+							err = er
+							return
+						}
+						childColumnList = append(childColumnList, childColumn)
+					}
+				}
+				args = append(args, argAst{
+					Val:  childColumnList,
+					Type: internetCallList[1],
+					Pos:  v.Pos(),
 				})
 			}
 		}
 		column.InternetFunc[funcExpr.Sel.Name] = args
 		var allCol columnAst
-		allCol, err = getColumn(fSet, funcExpr.X, internetCallName)
+		allCol, err = getColumn(fSet, funcExpr.X, internetCallName, importMap)
 		if err != nil {
 			return
 		}
@@ -189,7 +233,7 @@ func getColumn(fSet *token.FileSet, col ast.Expr, internetCallName string) (colu
 				fSet.Position(val.Pos()))
 			return
 		}
-		selfCallName := getInternetCallName(field)
+		selfCallName := getInternetCallName(field, importMap)
 		if selfCallName != internetCallName {
 			err = fmt.Errorf("%v: internal call method should be %v instead of %v",
 				fSet.Position(field.Pos()), internetCallName, selfCallName)
@@ -199,21 +243,28 @@ func getColumn(fSet *token.FileSet, col ast.Expr, internetCallName string) (colu
 	return
 }
 
-// 获取内部调用方法名称
-func getInternetCallName(file *ast.Field) (internetCallName string) {
-	internetCallName = file.Names[0].Name
+func getCallType(expr ast.Expr, importMap map[string]string) string {
 	var ok bool
-	// 获取类型
-	var typeExpr *ast.SelectorExpr
-	if typeExpr, ok = file.Type.(*ast.SelectorExpr); !ok {
-		return ""
+	switch val := expr.(type) {
+	case *ast.SelectorExpr:
+		var xTypeExpr *ast.Ident
+		if xTypeExpr, ok = val.X.(*ast.Ident); !ok {
+			return ""
+		}
+		if importMap[xTypeExpr.Name] != "" {
+			xTypeExpr.Name = importMap[xTypeExpr.Name]
+		}
+		return xTypeExpr.Name + "." + val.Sel.Name
+	case *ast.StarExpr:
+		return "*" + getCallType(val.X, importMap)
 	}
-	var xTypeExpr *ast.Ident
-	if xTypeExpr, ok = typeExpr.X.(*ast.Ident); !ok {
-		return ""
-	}
-	internetCallName += " " + xTypeExpr.Name + "." + typeExpr.Sel.Name
-	return
+	return ""
+}
+
+// 获取内部调用方法名称
+func getInternetCallName(file *ast.Field, importMap map[string]string) (internetCallName string) {
+	internetCallName = file.Names[0].Name
+	return internetCallName + " " + getCallType(file.Type, importMap)
 }
 
 // 获取方法中所有表
@@ -335,42 +386,26 @@ func getTableList(fSet *token.FileSet, f *ast.FuncDecl, importMap map[string]str
 				var funcArg *ast.FuncLit
 				if funcArg, ok = xCallExpr.Args[1].(*ast.FuncLit); !ok {
 					err = fmt.Errorf("%v: the 2st parameter type of method %v should be %v, not %v",
-						fSet.Position(xCallExpr.Fun.Pos()), tableValue.Func, arg2Note, getArgType(xCallExpr.Args[1]))
+						fSet.Position(xCallExpr.Fun.Pos()), tableValue.Func, arg2Note, getArgType(xCallExpr.Args[1], importMap))
 					return
 				}
 				if funcArg.Type == nil || len(funcArg.Type.Params.List) != 1 {
 					err = fmt.Errorf("%v: the 2st parameter type of method %v should be %v, not %v",
-						fSet.Position(xCallExpr.Fun.Pos()), tableValue.Func, arg2Note, getArgType(xCallExpr.Args[1]))
+						fSet.Position(xCallExpr.Fun.Pos()), tableValue.Func, arg2Note, getArgType(xCallExpr.Args[1], importMap))
 					return
 				}
 				param := funcArg.Type.Params.List[0]
 				if len(param.Names) != 1 {
 					err = fmt.Errorf("%v: the 2st parameter type of method %v should be %v, not %v",
-						fSet.Position(xCallExpr.Fun.Pos()), tableValue.Func, arg2Note, getArgType(xCallExpr.Args[1]))
+						fSet.Position(xCallExpr.Fun.Pos()), tableValue.Func, arg2Note, getArgType(xCallExpr.Args[1], importMap))
 					return
 				}
 				// 内部调用方法名称
-				internetCallName := getInternetCallName(param)
+				internetCallName := getInternetCallName(param, importMap)
 				// 判断类型是否和传入类型一致
-				var xSelectExpr *ast.SelectorExpr
-				if xSelectExpr, ok = param.Type.(*ast.SelectorExpr); !ok {
+				if arg2Type != getCallType(param.Type, importMap) {
 					err = fmt.Errorf("%v: the 2st parameter type of method %v should be %v, not %v",
-						fSet.Position(xCallExpr.Fun.Pos()), tableValue.Func, arg2Note, getArgType(xCallExpr.Args[1]))
-					return
-				}
-				var xIdent *ast.Ident
-				if xIdent, ok = xSelectExpr.X.(*ast.Ident); !ok {
-					err = fmt.Errorf("%v: the 2st parameter type of method %v should be %v, not %v",
-						fSet.Position(xCallExpr.Fun.Pos()), tableValue.Func, arg2Note, getArgType(xCallExpr.Args[1]))
-					return
-				}
-				argName := xIdent.Name
-				if importMap[argName] != "" {
-					argName = importMap[argName]
-				}
-				if arg2Type != argName+"."+xSelectExpr.Sel.Name {
-					err = fmt.Errorf("%v: the 2st parameter type of method %v should be %v, not %v",
-						fSet.Position(xCallExpr.Fun.Pos()), tableValue.Func, arg2Note, getArgType(xCallExpr.Args[1]))
+						fSet.Position(param.Type.Pos()), tableValue.Func, arg2Note, getArgType(xCallExpr.Args[1], importMap))
 					return
 				}
 				var column columnAst
@@ -378,7 +413,7 @@ func getTableList(fSet *token.FileSet, f *ast.FuncDecl, importMap map[string]str
 				for _, col := range funcArg.Body.List {
 					var exprStmt *ast.ExprStmt
 					if exprStmt, ok = col.(*ast.ExprStmt); ok {
-						column, err = getColumn(fSet, exprStmt.X, internetCallName)
+						column, err = getColumn(fSet, exprStmt.X, internetCallName, importMap)
 						if err != nil {
 							return
 						}
@@ -391,14 +426,75 @@ func getTableList(fSet *token.FileSet, f *ast.FuncDecl, importMap map[string]str
 								for _, internetArg := range column.InternetFunc[v] {
 									argTypes = append(argTypes, internetArg.Type)
 								}
+								pos := exprStmt.X.Pos()
+								if len(argTypes) > 0 {
+									pos = column.InternetFunc[v][0].Pos
+								}
 								args = append(args, arg{
 									Type:     v,
 									ArgTypes: argTypes,
+									Pos:      pos,
 								})
 							}
-							if err = validInternetFunc(tableValue.Type, funcArgValid[tableValue.Type][tableValue.Active], args); err != nil {
+							var pos token.Pos
+							if pos, err = validInternetFunc(tableValue.Type, funcArgValid[tableValue.Type][tableValue.Active], args); err != nil {
 								err = fmt.Errorf("%v: %v",
-									fSet.Position(exprStmt.X.Pos()), err.Error())
+									fSet.Position(pos), err.Error())
+								return
+							}
+						case "pgsql":
+							var args []arg
+							for _, v := range column.LianFuncSort {
+								var argTypes []string
+								for _, internetArg := range column.InternetFunc[v] {
+									switch vList := internetArg.Val.(type) {
+									case string:
+										argTypes = append(argTypes, internetArg.Type)
+									case []columnAst:
+										argTypes = append(argTypes, "func("+internetArg.Type+")")
+										for _, vColumn := range vList {
+											var childColumnList []arg
+											for _, vv := range vColumn.LianFuncSort {
+												var childArgTypes []string
+												for _, childArg := range vColumn.InternetFunc[vv] {
+													childArgTypes = append(childArgTypes, childArg.Type)
+												}
+												pos := internetArg.Pos
+												if len(childArgTypes) > 0 {
+													pos = vColumn.InternetFunc[vv][0].Pos
+												}
+												childColumnList = append(childColumnList, arg{
+													Type:     vv,
+													ArgTypes: childArgTypes,
+													Pos:      pos,
+												})
+											}
+											var pos token.Pos
+											if pos, err = validInternetFunc(tableValue.Type, internetArg.Type, childColumnList); err != nil {
+												err = fmt.Errorf("%v: %v",
+													fSet.Position(pos), err.Error())
+												return
+											}
+										}
+									default:
+										argTypes = append(argTypes, internetArg.Type)
+									}
+
+								}
+								pos := exprStmt.X.Pos()
+								if len(argTypes) > 0 {
+									pos = column.InternetFunc[v][0].Pos
+								}
+								args = append(args, arg{
+									Type:     v,
+									ArgTypes: argTypes,
+									Pos:      pos,
+								})
+							}
+							var pos token.Pos
+							if pos, err = validInternetFunc(tableValue.Type, funcArgValid[tableValue.Type][tableValue.Active], args); err != nil {
+								err = fmt.Errorf("%v: %v",
+									fSet.Position(pos), err.Error())
 								return
 							}
 						}
@@ -420,7 +516,7 @@ func getTableList(fSet *token.FileSet, f *ast.FuncDecl, importMap map[string]str
 }
 
 // 获取参数类型
-func getArgType(arg ast.Expr) string {
+func getArgType(arg ast.Expr, importMap map[string]string) string {
 	var ok bool
 	switch val := arg.(type) {
 	case *ast.BasicLit:
@@ -428,8 +524,7 @@ func getArgType(arg ast.Expr) string {
 	case *ast.FuncLit:
 		var params []string
 		for _, v := range val.Type.Params.List {
-			list := strings.Split(getInternetCallName(v), " ")
-			params = append(params, list[len(list)-1])
+			params = append(params, getCallType(v.Type, importMap))
 		}
 		var results []string
 		for _, value := range val.Type.Results.List {
@@ -456,14 +551,14 @@ func getArgType(arg ast.Expr) string {
 			return tp.Obj.Name + "{}"
 		}
 	case *ast.UnaryExpr:
-		return val.Op.String() + getArgType(val.X)
+		return val.Op.String() + getArgType(val.X, importMap)
 	case *ast.Ident:
 		if val.Obj.Decl != nil {
 			var declStmt *ast.AssignStmt
 			if declStmt, ok = val.Obj.Decl.(*ast.AssignStmt); ok {
 				var types []string
 				for _, v := range declStmt.Rhs {
-					types = append(types, getArgType(v))
+					types = append(types, getArgType(v, importMap))
 				}
 				return strings.Join(types, ", ")
 			}
